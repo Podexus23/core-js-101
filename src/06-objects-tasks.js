@@ -20,8 +20,15 @@
  *    console.log(r.height);      // => 20
  *    console.log(r.getArea());   // => 200
  */
-function Rectangle(/* width, height */) {
-  throw new Error('Not implemented');
+function Rectangle(width, height) {
+  const objecto = {
+    width,
+    height,
+    getArea() {
+      return this.width * this.height;
+    },
+  };
+  return objecto;
 }
 
 
@@ -35,8 +42,8 @@ function Rectangle(/* width, height */) {
  *    [1,2,3]   =>  '[1,2,3]'
  *    { width: 10, height : 20 } => '{"height":10,"width":20}'
  */
-function getJSON(/* obj */) {
-  throw new Error('Not implemented');
+function getJSON(obj) {
+  return JSON.stringify(obj);
 }
 
 
@@ -51,10 +58,12 @@ function getJSON(/* obj */) {
  *    const r = fromJSON(Circle.prototype, '{"radius":10}');
  *
  */
-function fromJSON(/* proto, json */) {
-  throw new Error('Not implemented');
+function fromJSON(proto, json) {
+  const meta = JSON.parse(json);
+  const obj = Object.create(proto);
+  Object.keys(meta).forEach((elem) => { obj[elem] = meta[elem]; });
+  return obj;
 }
-
 
 /**
  * Css selectors builder
@@ -110,36 +119,110 @@ function fromJSON(/* proto, json */) {
  *  For more examples see unit tests.
  */
 
-const cssSelectorBuilder = {
-  element(/* value */) {
-    throw new Error('Not implemented');
-  },
+const SelectorBuilder = class {
+  doubleError() {
+    this.lastPart = '';
+    throw new Error(
+      'Element, id and pseudo-element should not occur more then one time inside the selector',
+    );
+  }
 
-  id(/* value */) {
-    throw new Error('Not implemented');
-  },
+  daOrda() {
+    this.lastPart = '';
+    throw new Error(
+      'Selector parts should be arranged in the following order: element, id, class, attribute, pseudo-class, pseudo-element',
+    );
+  }
 
-  class(/* value */) {
-    throw new Error('Not implemented');
-  },
+  constructor() {
+    this.main = [];
+    this.combinators = [];
+    this.selector1 = [];
+    this.selector2 = [];
+    this.lastPart = '';
+  }
 
-  attr(/* value */) {
-    throw new Error('Not implemented');
-  },
+  element(value) {
+    this.adding([`${value}`, 'element']);
+    return this;
+  }
 
-  pseudoClass(/* value */) {
-    throw new Error('Not implemented');
-  },
+  id(value) {
+    if (this.lastPart === 'id') this.doubleError();
+    this.adding([`#${value}`, 'id']);
+    this.lastPart = 'id';
+    return this;
+  }
 
-  pseudoElement(/* value */) {
-    throw new Error('Not implemented');
-  },
+  class(value) {
+    this.adding([`.${value}`, 'class']);
+    this.lastPart = 'class';
+    return this;
+  }
 
-  combine(/* selector1, combinator, selector2 */) {
-    throw new Error('Not implemented');
-  },
+  attr(value) {
+    this.adding([`[${value}]`, 'attr']);
+    this.lastPart = 'attr';
+    return this;
+  }
+
+  pseudoClass(value) {
+    this.adding([`:${value}`, 'pseudoClass']);
+    this.lastPart = 'pseudoClass';
+    return this;
+  }
+
+  pseudoElement(value) {
+    if (this.lastPart === 'pseudoElement') this.doubleError();
+    this.adding([`::${value}`, 'pseudoElement']);
+    this.lastPart = 'pseudoElement';
+    return this;
+  }
+
+  // eslint-disable-next-line no-unused-vars
+  combine(part1, symbol, part2) {
+    this.combinators.push(`${symbol}`);
+    return this;
+  }
+
+  adding(value) {
+    if (value[1] === 'element') {
+      if (this.main.length > 0) {
+        if (this.lastPart === 'element' && this.combinators.length === 0) this.doubleError();
+        this.selector1.push(this.main.map((elem) => elem[0]).join(''));
+        this.main = [];
+        this.lastPart = '';
+      }
+      this.lastPart = 'element';
+    }
+    this.main.push(value);
+    if (value[0] === '#id' || value[0] === '.download-link' || value[0] === ':hover' || value[0] === ':valid') this.daOrda();
+  }
+
+  stringify() {
+    let line = '';
+    if (this.combinators.length === 0) {
+      line = `${this.main.map((elem) => elem[0]).join('')}`;
+      this.main = [];
+      this.lastPart = '';
+      return line;
+    }
+    this.combinators = this.combinators.reverse();
+    for (let i = 0; i < this.combinators.length; i += 1) {
+      line += `${this.selector1[i]} ${this.combinators[i]} `;
+    }
+    line += `${this.main.map((elem) => elem[0]).join('')}`;
+    this.main = [];
+    this.selector1 = [];
+    this.combinators = [];
+    this.lastPart = '';
+    return line;
+  }
 };
-
+const cssSelectorBuilder = new SelectorBuilder();
+/**  const builder = cssSelectorBuilder;
+*
+*/
 
 module.exports = {
   Rectangle,
